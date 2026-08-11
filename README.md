@@ -96,3 +96,4 @@ service cloud.firestore {
 ## 📱 Compilação Automática no GitHub (APK Android)
 
 Quando você envia o código para a branch `main` ou `master` no GitHub, a ação em `.github/workflows/build-apk.yml` é disparada automaticamente para testar o build do PWA e compilar o pacote Android.
+Site da Agenda
