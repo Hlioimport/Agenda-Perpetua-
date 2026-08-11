@@ -1,0 +1,6 @@
+{
+  "name": "Agenda Perpétua & Calendário",
+  "description": "Aplicativo moderno de calendário perpétuo e agenda inteligente sincronizada na nuvem com autenticação de usuário e compartilhamento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
