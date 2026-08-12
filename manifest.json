@@ -1,0 +1,13 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Agenda Perpétua",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Agenda Perpétua",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "description": "Minha Agenda Perpétua Pessoal",
+  "id": "agenda"
+}
