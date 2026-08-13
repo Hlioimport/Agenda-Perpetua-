@@ -7,6 +7,10 @@ export const WEEKDAYS_PT = [
   'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'
 ];
 
+export const getWeekDays = (): string[] => {
+  return WEEKDAYS_PT;
+};
+
 export const getTodayDateKey = (): string => {
   const today = new Date();
   const year = today.getFullYear();
