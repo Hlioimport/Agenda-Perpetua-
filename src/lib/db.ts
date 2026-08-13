@@ -1,74 +1,39 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  deleteDoc, 
-  query, 
-  where 
-} from 'firebase/firestore';
 import { db } from './firebase';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+export * from './csvHelper'; // Exporta o tipo Appointment e as funções de CSV que os botões procuram aqui
 
-// Interface que define a estrutura de um compromisso no banco
 export interface Appointment {
-  id?: string;
-  userId: string;
+  id: string;
   title: string;
-  description: string;
-  time: string;
-  color: string;
-  dateKey: string; // Ex: "2026-08-12"
-  isRecurring: boolean;
-  recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  date: string;
+  time?: string;
+  description?: string;
+  color?: string;
+  userId?: string;
+  userEmail?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-const COLLECTION_NAME = 'appointments';
-
-// Salva ou atualiza um compromisso no banco de dados do Firebase
-export const saveAppointment = async (appointment: Appointment): Promise<string> => {
-  try {
-    const appointmentsRef = collection(db, COLLECTION_NAME);
-    // Se já tiver ID, edita o existente. Se não, cria um documento novo com ID automático
-    const docRef = appointment.id ? doc(db, COLLECTION_NAME, appointment.id) : doc(appointmentsRef);
-    
-    const dataToSave = {
-      ...appointment,
-      id: docRef.id
-    };
-
-    await setDoc(docRef, dataToSave);
-    return docRef.id;
-  } catch (error) {
-    console.error("Erro ao salvar compromisso:", error);
-    throw error;
-  }
+// Funções do banco para salvar compromissos no Firebase
+export const saveAppointment = async (appointment: Omit<Appointment, 'id'>) => {
+  return await addDoc(collection(db, 'appointments'), appointment);
 };
 
-// Busca todos os compromissos salvos de um usuário específico
-export const getUserAppointments = async (userId: string): Promise<Appointment[]> => {
-  try {
-    const q = query(collection(db, COLLECTION_NAME), where("userId", "==", userId));
-    const querySnapshot = await getDocs(q);
-    const appointments: Appointment[] = [];
-    
-    querySnapshot.forEach((doc) => {
-      appointments.push(doc.data() as Appointment);
-    });
-    
-    return appointments;
-  } catch (error) {
-    console.error("Erro ao buscar compromissos do usuário:", error);
-    throw error;
-  }
+export const getAppointments = async (userId: string) => {
+  const q = query(collection(db, 'appointments'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  const appointments: Appointment[] = [];
+  querySnapshot.forEach((doc) => {
+    appointments.push({ id: doc.id, ...doc.data() } as Appointment);
+  });
+  return appointments;
 };
 
-// Deleta permanentemente um compromisso do banco de dados pelo ID
-export const deleteAppointment = async (appointmentId: string): Promise<void> => {
-  try {
-    const docRef = doc(db, COLLECTION_NAME, appointmentId);
-    await deleteDoc(docRef);
-  } catch (error) {
-    console.error("Erro ao deletar compromisso:", error);
-    throw error;
-  }
+export const deleteAppointment = async (id: string) => {
+  await deleteDoc(doc(db, 'appointments', id));
+};
+
+export const updateAppointment = async (id: string, appointment: Partial<Appointment>) => {
+  await updateDoc(doc(db, 'appointments', id), appointment);
 };
