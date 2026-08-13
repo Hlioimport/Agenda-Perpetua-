@@ -3,9 +3,16 @@ import {
   signOut, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  User
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
+
+// Monitora o estado da autenticação (se o usuário está logado ou não)
+export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
+};
 
 export const loginWithGoogle = async () => {
   try {
@@ -26,13 +33,14 @@ export const logoutUser = async () => {
   }
 };
 
-export const loginWithEmail = async (email: string, pass: string) => {
-  const result = await signInWithEmailAndPassword(auth, email, pass);
+// Modificado para aceitar 3 argumentos caso o componente envie o name/username por padrão
+export const registerWithEmail = async (email: string, pass: string, _extraParam?: any) => {
+  const result = await createUserWithEmailAndPassword(auth, email, pass);
   return result.user;
 };
 
-export const registerWithEmail = async (email: string, pass: string) => {
-  const result = await createUserWithEmailAndPassword(auth, email, pass);
+export const loginWithEmail = async (email: string, pass: string) => {
+  const result = await signInWithEmailAndPassword(auth, email, pass);
   return result.user;
 };
 
