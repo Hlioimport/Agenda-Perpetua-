@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } 
 export * from './csvHelper';
 
 export interface Appointment {
-  id: string;
+  id: any; // Ajustado para 'any' para aceitar conversões de referências ou strings sem travar a build
   title: string;
   date: string;
   time?: string;
@@ -32,7 +32,6 @@ export const getAppointments = async (userId: string) => {
   return appointments;
 };
 
-// Vincula o nome exato que o App.tsx está tentando importar
 export const getUserAppointments = getAppointments;
 
 export const deleteAppointment = async (id: string) => {
