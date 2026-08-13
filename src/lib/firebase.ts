@@ -1,33 +1,26 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
-import firebaseConfigJson from '../../firebase-applet-config.json';
+import { getFirestore } from 'firebase/firestore';
 
-// Initialize Firebase App
-const app = !getApps().length ? initializeApp(firebaseConfigJson) : getApp();
+// Configurações do Firebase obtidas pelas variáveis de ambiente do Vite
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
 
-// Initialize Auth
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
+
+// Exporta os serviços que a agenda vai usar
 export const auth = getAuth(app);
-
-// Initialize Firestore with specific database ID if specified
-export const db = firebaseConfigJson.firestoreDatabaseId && firebaseConfigJson.firestoreDatabaseId !== '(default)'
-  ? getFirestore(app, firebaseConfigJson.firestoreDatabaseId)
-  : getFirestore(app);
-
-// Enable offline persistence in Firestore for offline work and automatic background sync
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firestore multi-tab persistence failed (multiple tabs open)');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firestore persistence not supported in this browser');
-    }
-  });
-}
-
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Configura o provedor Google para solicitar seleção de conta sempre
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
-
-export default app;
