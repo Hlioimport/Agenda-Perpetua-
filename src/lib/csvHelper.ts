@@ -1,49 +1,53 @@
-import { Appointment } from './db';
+export interface Appointment {
+  id: string;
+  title: string;
+  date: string; // formato YYYY-MM-DD
+  time?: string;
+  description?: string;
+  color?: string;
+}
 
-// Função para exportar os compromissos para o formato CSV
-export const exportToCSV = (appointments: Appointment[]): string => {
-  const headers = ['id', 'title', 'description', 'time', 'color', 'dateKey', 'isRecurring', 'recurrenceType'];
-  
-  const rows = appointments.map(app => [
-    app.id || '',
-    `"${(app.title || '').replace(/"/g, '""')}"`,
-    `"${(app.description || '').replace(/"/g, '""')}"`,
-    app.time || '',
-    app.color || 'blue',
-    app.dateKey || '',
-    app.isRecurring ? 'true' : 'false',
-    app.recurrenceType || 'none'
-  ]);
+// Converte texto do arquivo CSV importado em objetos de compromisso
+export const parseCSVAppointments = (text: string): Omit<Appointment, 'id'>[] => {
+  const lines = text.split('\n');
+  const appointments: Omit<Appointment, 'id'>[] = [];
 
-  return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-};
-
-// Função para ler o arquivo CSV importado e converter de volta para objetos do app
-export const importFromCSV = (csvText: string, userId: string): Appointment[] => {
-  const lines = csvText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  if (lines.length <= 1) return [];
-
-  const appointments: Appointment[] = [];
-
+  // Pula o cabeçalho se houver e percorre as linhas
   for (let i = 1; i < lines.length; i++) {
-    // Regex simples para separar por vírgulas ignorando as que estão dentro de aspas
-    const matches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-    
-    if (matches.length >= 6) {
-      const clean = (val: string) => val ? val.replace(/^"|"$/g, '').replace(/""/g, '"').trim() : '';
+    const line = lines[i].trim();
+    if (!line) continue;
 
+    const [title, date, time, description, color] = line.split(',');
+    if (title && date) {
       appointments.push({
-        userId,
-        title: clean(matches[1]) || 'Compromisso Importado',
-        description: clean(matches[2]),
-        time: clean(matches[3]) || '12:00',
-        color: clean(matches[4]) || 'blue',
-        dateKey: clean(matches[5]),
-        isRecurring: matches[6] === 'true',
-        recurrenceType: (matches[7] as any) || 'none'
+        title: title.trim(),
+        date: date.trim(),
+        time: time ? time.trim() : undefined,
+        description: description ? description.trim() : undefined,
+        color: color ? color.trim() : undefined
       });
     }
   }
-
   return appointments;
+};
+
+// Gera um arquivo CSV de exemplo para o usuário baixar de modelo
+export const generateSampleCSV = (): string => {
+  const header = 'titulo,data,hora,descricao,cor\n';
+  const sampleRow = 'Reunião de Trabalho,2026-08-15,14:00,Alinhar as metas do mês,#3b82f6';
+  return header + sampleRow;
+};
+
+// Exporta a lista atual de compromissos para o formato texto CSV
+export const exportAppointmentsToCSV = (appointments: Appointment[]): string => {
+  const header = 'titulo,data,hora,descricao,cor\n';
+  const rows = appointments.map(app => {
+    const title = app.title.replace(/"/g, '""');
+    const date = app.date;
+    const time = app.time || '';
+    const desc = (app.description || '').replace(/"/g, '""');
+    const color = app.color || '';
+    return `"${title}",${date},"${time}","${desc}","${color}"`;
+  });
+  return header + rows.join('\n');
 };
