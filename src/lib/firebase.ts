@@ -2,25 +2,19 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Configurações do Firebase obtidas pelas variáveis de ambiente do Vite
+// Credenciais exatas do seu projeto Agenda Perpétua
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyAsb-V3YV78U2XmU_s7pE6b1WvA4YtZnc",
+  authDomain: "agenda-perpetua-a83d2.firebaseapp.com",
+  projectId: "agenda-perpetua-a83d2",
+  storageBucket: "agenda-perpetua-a83d2.appspot.com",
+  messagingSenderId: "1055849302114",
+  appId: "1:1055849302114:web:0a364fbfb7c25e41a832d3"
 };
 
 // Inicializa o Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exporta os serviços que a agenda vai usar
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
-
-// Configura o provedor Google para solicitar seleção de conta sempre
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
+export const db = getFirestore(app);
