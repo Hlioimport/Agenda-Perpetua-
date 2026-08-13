@@ -1,41 +1,63 @@
-// Define a estrutura de um evento vindo da API do Google Calendar
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  description?: string;
-  start: {
-    dateTime?: string;
-    date?: string;
-  };
-  end: {
-    dateTime?: string;
-    date?: string;
-  };
-}
+import { Appointment } from './csvHelper';
 
-// Função para simular ou processar a importação de eventos do Google Calendar
-export const formatGoogleEvents = (events: GoogleCalendarEvent[]): any[] => {
-  return events.map(event => {
-    // Tenta obter a data no formato ISO e extrair apenas o padrão YYYY-MM-DD
-    const fullDate = event.start.dateTime || event.start.date || '';
-    const dateKey = fullDate.substring(0, 10); 
+// Gera a URL para adicionar o compromisso diretamente ao Google Agenda do usuário
+export const generateGoogleCalendarUrl = (appointment: Appointment): string => {
+  const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const text = encodeURIComponent(appointment.title);
+  
+  // Formata as datas para o padrão do Google Agenda (YYYYMMDDTHHMMSSZ)
+  const dateStr = appointment.date.replace(/-/g, '');
+  const timeStr = appointment.time ? appointment.time.replace(/:/g, '') + '00' : '000000';
+  const dates = `${dateStr}T${timeStr}/${dateStr}T${timeStr}`;
 
-    // Tenta extrair o horário simplificado (HH:MM)
-    let time = '';
-    if (event.start.dateTime) {
-      const match = event.start.dateTime.match(/T(\d{2}:\d{2})/);
-      if (match) time = match[1];
-    }
+  const details = encodeURIComponent(appointment.description || '');
+  return `${base}&text=${text}&dates=${dates}&details=${details}`;
+};
 
-    return {
-      googleId: event.id,
-      title: event.summary || 'Compromisso sem título',
-      description: event.description || '',
-      time: time,
-      dateKey: dateKey,
-      color: 'indigo', // Cor padrão para identificar o que veio do Google
-      isRecurring: false,
-      recurrenceType: 'none'
-    };
+// Exporta múltiplos compromissos formatados para integração externa
+export const exportAppointmentsToIcs = (appointments: Appointment[]): string => {
+  let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Agenda Perpetua//BR\n';
+  
+  appointments.forEach(app => {
+    const dateStr = app.date.replace(/-/g, '');
+    icsContent += 'BEGIN:VEVENT\n';
+    icsContent += `SUMMARY:${app.title}\n`;
+    icsContent += `DTSTART:${dateStr}\n`;
+    icsContent += `DESCRIPTION:${app.description || ''}\n`;
+    icsContent += 'END:VEVENT\n';
   });
+  
+  icsContent += 'END:VCALENDAR';
+  return icsContent;
+};
+
+// Faz a leitura estruturada de calendários importados
+export const parseIcsCalendar = (text: string): Omit<Appointment, 'id'>[] => {
+  const appointments: Omit<Appointment, 'id'>[] = [];
+  const lines = text.split('\n');
+  let currentApp: Partial<Appointment> = {};
+
+  lines.forEach(line => {
+    if (line.startsWith('SUMMARY:')) {
+      currentApp.title = line.replace('SUMMARY:', '').trim();
+    } else if (line.startsWith('DTSTART:')) {
+      const rawDate = line.replace('DTSTART:', '').trim();
+      // Converte YYYYMMDD para YYYY-MM-DD
+      if (rawDate.length >= 8) {
+        currentApp.date = `${rawDate.substring(0, 4)}-${rawDate.substring(4, 6)}-${rawDate.substring(6, 8)}`;
+      }
+    } else if (line.startsWith('END:VEVENT')) {
+      if (currentApp.title && currentApp.date) {
+        appointments.push({
+          title: currentApp.title,
+          date: currentApp.date,
+          description: currentApp.description || '',
+          color: currentApp.color || '#3b82f6'
+        });
+      }
+      currentApp = {};
+    }
+  });
+
+  return appointments;
 };
