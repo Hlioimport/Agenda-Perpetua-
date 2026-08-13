@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-export * from './csvHelper'; // Exporta o tipo Appointment e as funções de CSV que os botões procuram aqui
+export * from './csvHelper';
 
 export interface Appointment {
   id: string;
@@ -13,9 +13,11 @@ export interface Appointment {
   userEmail?: string;
   createdAt?: string;
   updatedAt?: string;
+  dateKey?: string;
+  isRecurring?: boolean;
+  recurrenceType?: string;
 }
 
-// Funções do banco para salvar compromissos no Firebase
 export const saveAppointment = async (appointment: Omit<Appointment, 'id'>) => {
   return await addDoc(collection(db, 'appointments'), appointment);
 };
@@ -29,6 +31,9 @@ export const getAppointments = async (userId: string) => {
   });
   return appointments;
 };
+
+// Vincula o nome exato que o App.tsx está tentando importar
+export const getUserAppointments = getAppointments;
 
 export const deleteAppointment = async (id: string) => {
   await deleteDoc(doc(db, 'appointments', id));
