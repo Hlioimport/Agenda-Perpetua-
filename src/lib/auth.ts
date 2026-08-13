@@ -1,53 +1,35 @@
-import {
+import { 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  User,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  User
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
-import { UserProfile } from '../types';
 
-export const subscribeToAuthChanges = (callback: (user: UserProfile | null) => void) => {
-  return onAuthStateChanged(auth, (user: User | null) => {
-    if (user) {
-      callback({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0] || 'Usuário',
-        photoURL: user.photoURL
-      });
-    } else {
-      callback(null);
-    }
-  });
+// Escuta as mudanças no estado do usuário (se logou ou deslogou)
+export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
 };
 
-export const loginWithEmail = async (email: string, pass: string) => {
-  const result = await signInWithEmailAndPassword(auth, email, pass);
-  return result.user;
-};
-
-export const registerWithEmail = async (email: string, pass: string, name?: string) => {
-  const result = await createUserWithEmailAndPassword(auth, email, pass);
-  if (name && result.user) {
-    await updateProfile(result.user, { displayName: name });
+// Realiza o login utilizando a conta do Google
+export const loginWithGoogle = async (): Promise<User> => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error) {
+    console.error("Erro ao fazer login com o Google:", error);
+    throw error;
   }
-  return result.user;
 };
 
-export const sendPasswordReset = async (email: string) => {
-  await sendPasswordResetEmail(auth, email);
-};
-
-export const loginWithGoogle = async () => {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
-};
-
-export const logoutUser = async () => {
-  await signOut(auth);
+// Faz o logout do usuário atual
+export const logoutUser = async (): Promise<void> => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Erro ao fazer logout:", error);
+    throw error;
+  }
 };
