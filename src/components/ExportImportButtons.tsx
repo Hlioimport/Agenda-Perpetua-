@@ -38,7 +38,8 @@ export const ExportImportButtons: React.FC<ExportImportButtonsProps> = ({
     reader.onload = async (event) => {
       const csvText = event.target?.result as string;
       try {
-        const importedApps = importFromCSV(csvText, userId);
+        // Corrigido: Passando apenas o csvText (1 argumento)
+        const importedApps = importFromCSV(csvText) as unknown as Appointment[];
         if (importedApps.length === 0) {
           onNotification('Nenhum compromisso válido encontrado no arquivo.', 'error');
           return;
