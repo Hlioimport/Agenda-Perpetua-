@@ -1,6 +1,6 @@
-import { Appointment, RecurrenceType } from '../types';
+import type { Appointment, RecurrenceType } from '../types';
 
-export { Appointment, RecurrenceType };
+export type { Appointment, RecurrenceType };
 
 export interface ParseCSVResult {
   validAppointments: Omit<Appointment, 'id'>[];
