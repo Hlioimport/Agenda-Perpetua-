@@ -1,19 +1,28 @@
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
 export interface Appointment {
-  id: string;
+  id: any;
   title: string;
-  date: string; // formato YYYY-MM-DD
+  date: string;
   time?: string;
   description?: string;
   color?: string;
+  userId?: string;
+  userEmail?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  dateKey?: string;
+  isRecurring?: boolean;
+  recurrenceType?: RecurrenceType;
+  status?: string;
+  category?: string;
 }
 
-// Interface estendida para suportar o retorno com controle de erros do CSVModal
 export interface ParseCSVResult {
   validAppointments: Omit<Appointment, 'id'>[];
   errors: string[];
 }
 
-// Converte texto do arquivo CSV importado em objetos de compromisso com validação
 export const parseCSVAppointments = (text: string): ParseCSVResult => {
   const lines = text.split('\n');
   const validAppointments: Omit<Appointment, 'id'>[] = [];
@@ -23,48 +32,54 @@ export const parseCSVAppointments = (text: string): ParseCSVResult => {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const [title, date, time, description, color] = line.split(',');
+    const [title, date, time, description, color, category, status] = line.split(',');
     if (title && date) {
       validAppointments.push({
         title: title.trim(),
         date: date.trim(),
         time: time ? time.trim() : undefined,
         description: description ? description.trim() : undefined,
-        color: color ? color.trim() : undefined
+        color: color ? color.trim() : undefined,
+        category: category ? category.trim() : undefined,
+        status: status ? status.trim() : undefined,
+        userId: '',
+        userEmail: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
     } else {
-      errors.push(`Linha ${i + 1}: Dados inválidos ou incompletos.`);
+      errors.push(`Linha ${i + 1}: Dados inválidos.`);
     }
   }
   return { validAppointments, errors };
 };
 
-// Abreviação direta solicitada por botões do sistema
-export const ImportFromCSV = (text: string): Omit<Appointment, 'id'>[] => {
+export const importFromCSV = (text: string): Omit<Appointment, 'id'>[] => {
   const result = parseCSVAppointments(text);
   return result.validAppointments;
 };
 
-// Gera um arquivo CSV de exemplo para o usuário baixar de modelo
+export const ImportFromCSV = importFromCSV;
+
 export const generateSampleCSV = (): string => {
-  const header = 'titulo,data,hora,descricao,cor\n';
-  const sampleRow = 'Reunião de Trabalho,2026-08-15,14:00,Alinhar as metas do mês,#3b82f6';
+  const header = 'titulo,data,hora,descricao,cor,categoria,status\n';
+  const sampleRow = 'Reunião de Trabalho,2026-08-15,14:00,Alinhar as metas do mês,#3b82f6,Trabalho,Pendente';
   return header + sampleRow;
 };
 
-// Exporta a lista atual de compromissos para o formato texto CSV (aceita argumentos adicionais opcionais)
 export const exportAppointmentsToCSV = (appointments: Appointment[], _extra?: any): string => {
-  const header = 'titulo,data,hora,descricao,cor\n';
+  const header = 'titulo,data,hora,descricao,cor,categoria,status\n';
   const rows = appointments.map(app => {
-    const title = app.title.replace(/"/g, '""');
-    const date = app.date;
+    const title = (app.title || '').replace(/"/g, '""');
+    const date = app.date || '';
     const time = app.time || '';
     const desc = (app.description || '').replace(/"/g, '""');
     const color = app.color || '';
-    return `"${title}",${date},"${time}","${desc}","${color}"`;
+    const category = app.category || '';
+    const status = app.status || '';
+    return `"${title}",${date},"${time}","${desc}","${color}","${category}","${status}"`;
   });
   return header + rows.join('\n');
 };
 
-// Alias para exportToCSV que os botões também chamam
 export const exportToCSV = exportAppointmentsToCSV;
