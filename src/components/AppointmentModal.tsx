@@ -4,15 +4,22 @@ import { Appointment, RecurrenceType } from '../types';
 interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (appointment: Omit<Appointment, 'id'>) => void;
+  onSave: (appointment: any) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
   initialData?: Appointment | null;
+  editingAppointment?: Appointment | null;
+  selectedDateKey?: string;
+  userId?: string;
+  [key: string]: any;
 }
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   initialData,
+  editingAppointment,
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -23,16 +30,18 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType | string>('none');
 
+  const currentAppointment = initialData || editingAppointment;
+
   useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title || '');
-      setDate(initialData.date || '');
-      setTime(initialData.time || '');
-      setDescription(initialData.description || '');
-      setColor(initialData.color || '#3b82f6');
-      setCategory(initialData.category || '');
-      setIsRecurring(!!initialData.isRecurring);
-      setRecurrenceType(initialData.recurrenceType || 'none');
+    if (currentAppointment) {
+      setTitle(currentAppointment.title || '');
+      setDate(currentAppointment.date || '');
+      setTime(currentAppointment.time || '');
+      setDescription(currentAppointment.description || '');
+      setColor(currentAppointment.color || '#3b82f6');
+      setCategory(currentAppointment.category || '');
+      setIsRecurring(!!currentAppointment.isRecurring);
+      setRecurrenceType(currentAppointment.recurrenceType || 'none');
     } else {
       setTitle('');
       setDate('');
@@ -43,13 +52,14 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setIsRecurring(false);
       setRecurrenceType('none');
     }
-  }, [initialData, isOpen]);
+  }, [currentAppointment, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
+      ...(currentAppointment?.id ? { id: currentAppointment.id } : {}),
       title,
       date,
       time,
@@ -58,16 +68,23 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       category,
       isRecurring,
       recurrenceType: recurrenceType as RecurrenceType,
-      status: 'Pendente',
+      status: currentAppointment?.status || 'Pendente',
     });
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (currentAppointment?.id && onDelete) {
+      onDelete(currentAppointment.id);
+      onClose();
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
         <h2 className="text-xl font-bold mb-4">
-          {initialData ? 'Editar Compromisso' : 'Novo Compromisso'}
+          {currentAppointment ? 'Editar Compromisso' : 'Novo Compromisso'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -160,20 +177,32 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             )}
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-100"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Salvar
-            </button>
+          <div className="flex justify-between space-x-2 pt-4 border-t">
+            {currentAppointment && onDelete ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Excluir
+              </button>
+            ) : <div />}
+
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         </form>
       </div>
