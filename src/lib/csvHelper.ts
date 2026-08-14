@@ -1,12 +1,9 @@
-// Importa o tipo oficial do projeto se existir ou define a estrutura completa aceita pelo app
-import type { Appointment as OfficialAppointment, RecurrenceType as OfficialRecurrenceType, AppointmentStatus as OfficialAppointmentStatus } from '../types';
-
-export type RecurrenceType = OfficialRecurrenceType extends undefined ? ('none' | 'daily' | 'weekly' | 'monthly' | 'yearly') : OfficialRecurrenceType;
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Appointment {
   id?: any;
-  title: string;
-  date: string;
+  title?: string;
+  date?: string;
   time?: string;
   description?: string;
   color?: string;
@@ -16,7 +13,7 @@ export interface Appointment {
   updatedAt?: any;
   dateKey?: string;
   isRecurring?: boolean;
-  recurrenceType?: any;
+  recurrenceType?: RecurrenceType | string;
   status?: any;
   category?: string;
   [key: string]: any;
@@ -37,10 +34,10 @@ export const parseCSVAppointments = (text: string): ParseCSVResult => {
     if (!line) continue;
 
     const [title, date, time, description, color, category, status] = line.split(',');
-    if (title && date) {
+    if (title || date) {
       validAppointments.push({
-        title: title.trim(),
-        date: date.trim(),
+        title: title ? title.trim() : 'Sem título',
+        date: date ? date.trim() : '',
         time: time ? time.trim() : undefined,
         description: description ? description.trim() : undefined,
         color: color ? color.trim() : undefined,
@@ -71,16 +68,17 @@ export const generateSampleCSV = (): string => {
   return header + sampleRow;
 };
 
-export const exportAppointmentsToCSV = (appointments: any[], _extra?: any): string => {
+export const exportAppointmentsToCSV = (appointments: any, _extra?: any): string => {
+  const list = Array.isArray(appointments) ? appointments : [];
   const header = 'titulo,data,hora,descricao,cor,categoria,status\n';
-  const rows = (appointments || []).map(app => {
-    const title = (app.title || '').replace(/"/g, '""');
-    const date = app.date || '';
-    const time = app.time || '';
-    const desc = (app.description || '').replace(/"/g, '""');
-    const color = app.color || '';
-    const category = app.category || '';
-    const status = typeof app.status === 'string' ? app.status : '';
+  const rows = list.map(app => {
+    const title = (app?.title || '').replace(/"/g, '""');
+    const date = app?.date || '';
+    const time = app?.time || '';
+    const desc = (app?.description || '').replace(/"/g, '""');
+    const color = app?.color || '';
+    const category = app?.category || '';
+    const status = typeof app?.status === 'string' ? app.status : '';
     return `"${title}",${date},"${time}","${desc}","${color}","${category}","${status}"`;
   });
   return header + rows.join('\n');
