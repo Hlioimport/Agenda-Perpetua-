@@ -1,23 +1,6 @@
-export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+import { Appointment, RecurrenceType } from '../types';
 
-export interface Appointment {
-  id?: any;
-  title?: string;
-  date?: string;
-  time?: string;
-  description?: string;
-  color?: string;
-  userId?: string;
-  userEmail?: string;
-  createdAt?: any;
-  updatedAt?: any;
-  dateKey?: string;
-  isRecurring?: boolean;
-  recurrenceType?: RecurrenceType | string;
-  status?: any;
-  category?: string;
-  [key: string]: any;
-}
+export { Appointment, RecurrenceType };
 
 export interface ParseCSVResult {
   validAppointments: Omit<Appointment, 'id'>[];
@@ -38,11 +21,11 @@ export const parseCSVAppointments = (text: string): ParseCSVResult => {
       validAppointments.push({
         title: title ? title.trim() : 'Sem título',
         date: date ? date.trim() : '',
-        time: time ? time.trim() : undefined,
-        description: description ? description.trim() : undefined,
-        color: color ? color.trim() : undefined,
-        category: category ? category.trim() : undefined,
-        status: status ? status.trim() : undefined,
+        time: time ? time.trim() : '',
+        description: description ? description.trim() : '',
+        color: color ? color.trim() : '',
+        category: category ? category.trim() : '',
+        status: status ? status.trim() : 'Pendente',
         userId: '',
         userEmail: '',
         createdAt: Date.now(),
@@ -68,7 +51,7 @@ export const generateSampleCSV = (): string => {
   return header + sampleRow;
 };
 
-export const exportAppointmentsToCSV = (appointments: any, _extra?: any): string => {
+export const exportAppointmentsToCSV = (appointments?: any, _extra?: any): string => {
   const list = Array.isArray(appointments) ? appointments : [];
   const header = 'titulo,data,hora,descricao,cor,categoria,status\n';
   const rows = list.map(app => {
