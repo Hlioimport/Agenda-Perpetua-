@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import { Calendar as CalendarIcon, Plus, Search, Clock, Trash2, Edit3, X, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 type Category = 'Trabalho' | 'Pessoal' | 'Reunião' | 'Saúde' | 'Estudos' | 'Outro';
 type Status = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Cancelado';
@@ -38,13 +37,39 @@ export default function App() {
   const [formStatus, setFormStatus] = useState<Status>('Pendente');
   const [formNote, setFormNote] = useState('');
 
-  const [events, setEvents] = useState<EventItem[]>([
-    { id: '1', title: 'Apresentação do Projeto', date: todayStr, time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides.' },
-    { id: '2', title: 'Alinhamento de Equipe', date: todayStr, time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir metas.' }
-  ]);
+  // Carrega eventos salvos do localStorage ou usa valor padrão inicial
+  const [events, setEvents] = useState<EventItem[]>(() => {
+    const saved = localStorage.getItem('agenda_events');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Erro ao ler do localStorage', e);
+      }
+    }
+    return [
+      { id: '1', title: 'Apresentação do Projeto', date: todayStr, time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides.' },
+      { id: '2', title: 'Alinhamento de Equipe', date: todayStr, time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir metas.' }
+    ];
+  });
+
+  // Salva no localStorage sempre que o estado de eventos mudar (Exclusão / Edição / Criação)
+  useEffect(() => {
+    localStorage.setItem('agenda_events', JSON.stringify(events));
+  }, [events]);
 
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
+
+  // Gerador de anos para o dropdown (de 10 anos atrás até 10 anos no futuro)
+  const yearOptions = useMemo(() => {
+    const startYear = today.getFullYear() - 10;
+    const years = [];
+    for (let i = 0; i <= 20; i++) {
+      years.push(startYear + i);
+    }
+    return years;
+  }, []);
 
   const calendarGrid = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -90,6 +115,10 @@ export default function App() {
     setIsModalOpen(false);
   };
 
+  const handleDeleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+  };
+
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -100,31 +129,30 @@ export default function App() {
   }, [events, searchQuery, selectedCategory, selectedStatus, selectedDateStr]);
 
   return (
-    <div className="min-h-screen bg-[#0b132b] text-slate-100 p-4">
+    <div className="min-h-screen bg-[#0b132b] text-slate-100 p-4 font-sans">
       <div className="max-w-6xl mx-auto space-y-4">
         
         {/* Header */}
         <header className="bg-[#1c2541] p-4 rounded-xl border border-slate-700 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <CalendarIcon className="w-6 h-6 text-blue-400"/>
+            <span className="text-xl">📅</span>
             <h1 className="text-xl font-bold text-white">Agenda Perpétua</h1>
           </div>
           <button onClick={() => handleOpenModal()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-            <Plus className="w-4 h-4"/> Novo Evento
+            <span>+</span> Novo Evento
           </button>
         </header>
 
         {/* Filtros */}
         <div className="bg-[#1c2541] p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400"/>
-            <input type="text" placeholder="Buscar..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-[#0b132b] border border-slate-700 pl-9 pr-3 py-1.5 rounded-lg text-xs text-white" />
+            <input type="text" placeholder="Buscar..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-[#0b132b] border border-slate-700 px-3 py-1.5 rounded-lg text-xs text-white" />
           </div>
-          <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="bg-[#0b132b] border border-slate-700 px-2 py-1.5 rounded-lg text-xs">
+          <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="bg-[#0b132b] border border-slate-700 px-2 py-1.5 rounded-lg text-xs text-white">
             <option value="Todas as Categorias">Todas as Categorias</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="bg-[#0b132b] border border-slate-700 px-2 py-1.5 rounded-lg text-xs">
+          <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="bg-[#0b132b] border border-slate-700 px-2 py-1.5 rounded-lg text-xs text-white">
             <option value="Todos os Status">Todos os Status</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -135,11 +163,27 @@ export default function App() {
           
           {/* Calendário */}
           <div className="md:col-span-2 bg-[#1c2541] p-4 rounded-xl border border-slate-700 space-y-3">
-            <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-              <h2 className="text-base font-bold text-white">{MONTHS[currentMonth]} {currentYear}</h2>
-              <div className="flex gap-1">
-                <button onClick={() => setCurrentDate(new Date(currentYear, currentMonth - 1, 1))} className="p-1 hover:bg-slate-700 rounded"><ChevronLeft className="w-4 h-4"/></button>
-                <button onClick={() => setCurrentDate(new Date(currentYear, currentMonth + 1, 1))} className="p-1 hover:bg-slate-700 rounded"><ChevronRight className="w-4 h-4"/></button>
+            
+            {/* Controles de Mês e Ano */}
+            <div className="flex flex-wrap justify-between items-center border-b border-slate-700 pb-2 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base font-bold text-white">{MONTHS[currentMonth]}</span>
+                {/* Seletor do Ano */}
+                <select
+                  value={currentYear}
+                  onChange={e => setCurrentDate(new Date(Number(e.target.value), currentMonth, 1))}
+                  className="bg-[#0b132b] border border-slate-700 text-white text-sm font-bold rounded px-2 py-0.5"
+                >
+                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              {/* Botões de Navegação */}
+              <div className="flex gap-1 items-center">
+                <button title="Ano Anterior" onClick={() => setCurrentDate(new Date(currentYear - 1, currentMonth, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs font-bold text-slate-300">« Ano</button>
+                <button title="Mês Anterior" onClick={() => setCurrentDate(new Date(currentYear, currentMonth - 1, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs text-slate-300">◀ Mês</button>
+                <button title="Mês Seguinte" onClick={() => setCurrentDate(new Date(currentYear, currentMonth + 1, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs text-slate-300">Mês ▶</button>
+                <button title="Ano Seguinte" onClick={() => setCurrentDate(new Date(currentYear + 1, currentMonth, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs font-bold text-slate-300">Ano »</button>
               </div>
             </div>
 
@@ -181,7 +225,7 @@ export default function App() {
           {/* Lista de Eventos */}
           <div className="bg-[#1c2541] p-4 rounded-xl border border-slate-700 space-y-3">
             <h2 className="text-sm font-bold text-white border-b border-slate-700 pb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-400"/> Eventos ({selectedDateStr})
+              ⏱️ Eventos ({selectedDateStr})
             </h2>
 
             <div className="space-y-2 max-h-[380px] overflow-y-auto">
@@ -196,8 +240,8 @@ export default function App() {
                   <p className="text-[10px] text-slate-400">{ev.time} • {ev.category}</p>
                   {ev.note && <p className="text-[11px] text-slate-300 bg-[#1c2541] p-1 rounded border border-slate-800">{ev.note}</p>}
                   <div className="flex justify-end gap-2 pt-1">
-                    <button onClick={() => handleOpenModal(ev)} className="text-slate-400 hover:text-blue-400"><Edit3 className="w-3 h-3"/></button>
-                    <button onClick={() => setEvents(prev => prev.filter(e => e.id !== ev.id))} className="text-slate-400 hover:text-rose-400"><Trash2 className="w-3 h-3"/></button>
+                    <button onClick={() => handleOpenModal(ev)} className="text-xs text-slate-400 hover:text-blue-400">✏️ Editar</button>
+                    <button onClick={() => handleDeleteEvent(ev.id)} className="text-xs text-slate-400 hover:text-rose-400">🗑️ Excluir</button>
                   </div>
                 </div>
               ))}
@@ -213,7 +257,7 @@ export default function App() {
           <div className="bg-[#1c2541] border border-slate-700 w-full max-w-md rounded-xl p-4 space-y-3">
             <div className="flex justify-between items-center border-b border-slate-700 pb-2">
               <h3 className="text-sm font-bold text-white">{editingEvent ? 'Editar Evento' : 'Novo Evento'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><X className="w-4 h-4"/></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             <form onSubmit={handleSaveEvent} className="space-y-2 text-xs">
@@ -234,7 +278,7 @@ export default function App() {
               
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-3 py-1 text-slate-400">Cancelar</button>
-                <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded font-semibold flex items-center gap-1"><Save className="w-3 h-3"/> Salvar</button>
+                <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded font-semibold">Salvar</button>
               </div>
             </form>
           </div>
