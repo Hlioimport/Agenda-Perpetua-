@@ -1,440 +1,490 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Calendar as CalendarIcon, 
-  Share2, 
-  Smartphone, 
-  Search, 
-  Plus, 
-  FileText, 
-  CheckCircle, 
+import React, { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  Search,
+  FileText,
+  CheckCircle2,
+  Clock,
+  Trash2,
+  Edit3,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
   X,
-  LogOut,
-  ChevronDown
+  Save,
+  Tag,
+  AlertCircle
 } from 'lucide-react';
-import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
-import { db } from './lib/firebase';
+
+// Tipos de dados
+type Category = 'Trabalho' | 'Pessoal' | 'Reunião' | 'Saúde' | 'Estudos' | 'Outro';
+type Status = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Cancelado';
+type ViewMode = 'month' | 'clean' | 'notes';
 
 interface EventItem {
-  id?: string;
+  id: string;
   title: string;
-  description?: string;
-  date: string;
-  time: string;
-  color: string;
-  category?: string;
-  status?: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  category: Category;
+  status: Status;
+  note?: string;
 }
 
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const CATEGORIES: Category[] = ['Trabalho', 'Pessoal', 'Reunião', 'Saúde', 'Estudos', 'Outro'];
+const STATUSES: Status[] = ['Pendente', 'Em Andamento', 'Concluído', 'Cancelado'];
+
 export default function App() {
-  const todayStr = '2026-08-15';
-  const [currentDate] = useState(new Date(2026, 7, 15));
-  const [selectedDateStr, setSelectedDateStr] = useState('2026-08-15');
-  const [events, setEvents] = useState<EventItem[]>([]);
-  
+  // Datas e Visualização
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 15)); // Agosto 2026
+  const [selectedDateStr, setSelectedDateStr] = useState('2026-08-16');
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
+
   // Filtros
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Todas as Categorias');
-  const [selectedStatus, setSelectedStatus] = useState('Todos os Status');
-  const [onlyNotes, setOnlyNotes] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todas as Categorias');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
 
-  // Modais e Feedback
-  const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  // Modal / Edição
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
-  // Formulário
-  const [title, setTitle] = useState('');
-  const [time, setTime] = useState('17:40');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState('#eab308');
+  // Form State
+  const [formTitle, setFormTitle] = useState('');
+  const [formDate, setFormDate] = useState('2026-08-16');
+  const [formTime, setFormTime] = useState('09:00');
+  const [formCategory, setFormCategory] = useState<Category>('Reunião');
+  const [formStatus, setFormStatus] = useState<Status>('Pendente');
+  const [formNote, setFormNote] = useState('');
 
-  const formatDateToKey = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  // Banco de Dados Inicial de Teste
+  const [events, setEvents] = useState<EventItem[]>([
+    {
+      id: '1',
+      title: 'TESTES',
+      date: '2026-08-16',
+      time: '17:40',
+      category: 'Trabalho',
+      status: 'Pendente',
+      note: 'Anotação adicionada para testes do sistema.'
+    },
+    {
+      id: '2',
+      title: 'Reunião de Alinhamento Semanal',
+      date: '2026-08-16',
+      time: '09:00',
+      category: 'Reunião',
+      status: 'Em Andamento',
+      note: 'Revisar metas do projeto e prazos das entregas.'
+    }
+  ]);
+
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+
+  // Troca de Mês / Ano via Selects
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMonth = parseInt(e.target.value, 10);
+    setCurrentDate(new Date(currentYear, newMonth, 1));
   };
 
-  useEffect(() => {
-    const q = query(collection(db, 'events'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetched: EventItem[] = [];
-      snapshot.forEach((doc) => {
-        fetched.push({ id: doc.id, ...doc.data() } as EventItem);
-      });
-      setEvents(fetched);
-    }, (err) => console.error(err));
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newYear = parseInt(e.target.value, 10);
+    setCurrentDate(new Date(newYear, currentMonth, 1));
+  };
 
-    return () => unsubscribe();
-  }, []);
+  // Abrir modal para Criar
+  const handleOpenCreateModal = (dateStr?: string) => {
+    setEditingEvent(null);
+    setFormTitle('');
+    setFormDate(dateStr || selectedDateStr);
+    setFormTime('09:00');
+    setFormCategory('Reunião');
+    setFormStatus('Pendente');
+    setFormNote('');
+    setIsModalOpen(true);
+  };
 
-  const handleSaveEvent = async (e: React.FormEvent) => {
+  // Abrir modal para Editar
+  const handleOpenEditModal = (event: EventItem) => {
+    setEditingEvent(event);
+    setFormTitle(event.title);
+    setFormDate(event.date);
+    setFormTime(event.time);
+    setFormCategory(event.category);
+    setFormStatus(event.status);
+    setFormNote(event.note || '');
+    setIsModalOpen(true);
+  };
+
+  // Salvar (Novo ou Edição)
+  const handleSaveEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!formTitle.trim()) return;
 
-    try {
-      await addDoc(collection(db, 'events'), {
-        title,
-        description,
-        date: selectedDateStr,
-        time,
-        color,
-        createdAt: new Date()
-      });
+    if (editingEvent) {
+      setEvents(prev => prev.map(ev => ev.id === editingEvent.id ? {
+        ...ev,
+        title: formTitle,
+        date: formDate,
+        time: formTime,
+        category: formCategory,
+        status: formStatus,
+        note: formNote
+      } : ev));
+    } else {
+      const newEv: EventItem = {
+        id: Date.now().toString(),
+        title: formTitle,
+        date: formDate,
+        time: formTime,
+        category: formCategory,
+        status: formStatus,
+        note: formNote
+      };
+      setEvents(prev => [...prev, newEv]);
+    }
+    setIsModalOpen(false);
+  };
 
-      setTitle('');
-      setDescription('');
-      setShowModal(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    } catch (err) {
-      console.error(err);
+  // Excluir compromisso
+  const handleDeleteEvent = (id: string) => {
+    if (confirm('Deseja realmente excluir este compromisso?')) {
+      setEvents(prev => prev.filter(ev => ev.id !== id));
     }
   };
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  // Eventos Filtrados
+  const filteredEvents = useMemo(() => {
+    return events.filter(ev => {
+      // Busca texto
+      const matchesSearch = ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (ev.note && ev.note.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const filteredEvents = events.filter(ev => {
-    const matchesSearch = ev.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (ev.description && ev.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesNotes = onlyNotes ? !!ev.description : true;
-    return matchesSearch && matchesNotes;
-  });
+      // Filtro de Categoria
+      const matchesCategory = selectedCategory === 'Todas as Categorias' || ev.category === selectedCategory;
 
-  const selectedDayEvents = filteredEvents.filter(ev => ev.date === selectedDateStr);
+      // Filtro de Status
+      const matchesStatus = selectedStatus === 'Todos os Status' || ev.status === selectedStatus;
+
+      // Se for modo 'notes', só mostra quem tem anotação
+      const matchesNotesMode = viewMode === 'notes' ? Boolean(ev.note && ev.note.trim().length > 0) : true;
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesNotesMode;
+    });
+  }, [events, searchQuery, selectedCategory, selectedStatus, viewMode]);
+
+  // Dias do mês para a grade
+  const calendarDays = useMemo(() => {
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(null);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const monthStr = String(currentMonth + 1).padStart(2, '0');
+      const dayStr = String(d).padStart(2, '0');
+      const fullDateStr = `${currentYear}-${monthStr}-${dayStr}`;
+      days.push({
+        dayNumber: d,
+        dateStr: fullDateStr,
+        hasEvents: events.some(e => e.date === fullDateStr)
+      });
+    }
+    return days;
+  }, [currentYear, currentMonth, events]);
+
+  const selectedDayEvents = filteredEvents.filter(e => e.date === selectedDateStr);
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans flex flex-col">
-      {/* Topbar Pro */}
-      <header className="bg-[#0b0f19] border-b border-slate-800/80 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <CalendarIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-base font-bold text-white tracking-wide">Agenda Perpétua</h1>
-              <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Agenda Protegida • Online
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">Calendário Perpétuo & Acesso Individual Protegido</p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-200 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium transition-all">
-            <Share2 className="w-3.5 h-3.5" /> Compartilhar
-          </button>
-          <button className="bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium transition-all">
-            <Smartphone className="w-3.5 h-3.5" /> App Android
-          </button>
-          <button className="bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-400 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium transition-all">
-            <CalendarIcon className="w-3.5 h-3.5" /> Google Agenda
-          </button>
-          <button className="bg-slate-800/80 border border-slate-700/50 text-slate-200 text-xs px-3 py-2 rounded-lg font-medium">
-            CSV
-          </button>
-          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center border border-indigo-400/30">
-            H
-          </div>
-          <button className="text-slate-400 hover:text-slate-200 p-2">
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-[#0b132b] text-white font-sans p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
         
-        {/* Painel de Filtros e Visualização */}
-        <div className="bg-[#111726] border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#182032] border border-slate-700/50 px-4 py-2 rounded-xl flex items-center space-x-3">
-                <span className="text-sm font-semibold text-white">Agosto</span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-semibold text-indigo-400">2026</span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </div>
+        {/* CABEÇALHO / NAVBAR */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#1c2541] p-4 rounded-xl border border-slate-700/50 shadow-lg">
+          
+          {/* Mês e Ano Selects */}
+          <div className="flex items-center gap-2">
+            <select
+              value={currentMonth}
+              onChange={handleMonthChange}
+              className="bg-[#0b132b] text-white px-3 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-blue-500 font-semibold"
+            >
+              {MONTHS.map((m, idx) => (
+                <option key={m} value={idx}>{m}</option>
+              ))}
+            </select>
 
-              <button 
-                onClick={() => setShowModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all border border-indigo-400/30"
-              >
-                <Plus className="w-4 h-4" /> Novo Compromisso
-              </button>
-            </div>
+            <select
+              value={currentYear}
+              onChange={handleYearChange}
+              className="bg-[#0b132b] text-white px-3 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-blue-500 font-semibold"
+            >
+              {Array.from({ length: 15 }, (_, i) => 2024 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
 
-            <div className="bg-[#182032] p-1 rounded-xl border border-slate-700/50 flex items-center text-xs">
-              <button className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm">Mês</button>
-              <button className="text-slate-400 px-3 py-1.5 hover:text-white">Agenda Clean</button>
-            </div>
+            <button
+              onClick={() => handleOpenCreateModal()}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-all shadow-md ml-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Compromisso</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-slate-800/60">
-            <div className="relative md:col-span-1">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Buscar compromissos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#182032] border border-slate-700/50 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            <select 
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-[#182032] border border-slate-700/50 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
-            >
-              <option>Todas as Categorias</option>
-            </select>
-
-            <select 
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-[#182032] border border-slate-700/50 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
-            >
-              <option>Todos os Status</option>
-            </select>
-
-            <button 
-              onClick={() => setOnlyNotes(!onlyNotes)}
-              className={`border text-xs px-3 py-2 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${
-                onlyNotes 
-                  ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' 
-                  : 'bg-[#182032] border-slate-700/50 text-slate-300 hover:bg-slate-800'
+          {/* BOTÕES DE MODO DE VISUALIZAÇÃO */}
+          <div className="flex items-center bg-[#0b132b] p-1 rounded-xl border border-slate-700">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewMode === 'month'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <FileText className="w-3.5 h-3.5" /> Com Anotações
+              <CalendarIcon className="w-4 h-4" />
+              <span>Mês</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('clean')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewMode === 'clean'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span>Agenda Clean</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('notes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewMode === 'notes'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Com Anotações</span>
             </button>
           </div>
         </div>
 
-        {/* Grid do Calendário */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-[#111726] border border-slate-800/80 rounded-2xl p-5 shadow-xl">
-            <div className="grid grid-cols-7 text-center text-xs font-bold text-rose-500 mb-3 pb-2 border-b border-slate-800/60">
-              <div>DOM</div>
-              <div className="text-slate-400">SEG</div>
-              <div className="text-slate-400">TER</div>
-              <div className="text-slate-400">QUA</div>
-              <div className="text-slate-400">QUI</div>
-              <div className="text-slate-400">SEX</div>
-              <div>SÁB</div>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1.5">
-              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                <div key={`empty-${i}`} className="min-h-[72px] bg-transparent" />
-              ))}
-
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const dayNum = i + 1;
-                const thisDate = new Date(year, month, dayNum);
-                const dateKey = formatDateToKey(thisDate);
-                const isSelected = selectedDateStr === dateKey;
-                const isToday = todayStr === dateKey;
-                const dayEvents = filteredEvents.filter(ev => ev.date === dateKey);
-
-                return (
-                  <button
-                    key={dayNum}
-                    onClick={() => setSelectedDateStr(dateKey)}
-                    className={`min-h-[72px] p-2 rounded-xl flex flex-col justify-between border transition-all text-left ${
-                      isSelected
-                        ? 'bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/50'
-                        : isToday
-                        ? 'bg-emerald-950/40 border-emerald-500/80'
-                        : 'bg-[#182032]/50 border-slate-800/60 hover:border-slate-700 hover:bg-[#182032]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className={`text-xs font-bold ${
-                        isToday 
-                          ? 'text-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 rounded-md' 
-                          : isSelected 
-                          ? 'text-indigo-400' 
-                          : 'text-slate-300'
-                      }`}>
-                        {dayNum}
-                      </span>
-                      {dayEvents.length > 0 && (
-                        <span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50" />
-                      )}
-                    </div>
-
-                    <div className="space-y-1 w-full mt-1">
-                      {dayEvents.slice(0, 2).map((ev, idx) => (
-                        <div 
-                          key={idx} 
-                          className="bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 font-mono truncate"
-                        >
-                          <FileText className="w-2.5 h-2.5" />
-                          <span className="truncate">{ev.title}</span>
-                        </div>
-                      ))}
-                      {dayEvents.length > 2 && (
-                        <span className="text-[9px] text-slate-500 font-semibold pl-1">
-                          +{dayEvents.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        {/* BARRA DE PESQUISA E FILTROS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#1c2541] p-3 rounded-xl border border-slate-700/50">
+          
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar compromissos ou anotações..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#0b132b] text-white pl-9 pr-3 py-2 rounded-lg border border-slate-600 text-sm focus:outline-none focus:border-blue-500"
+            />
           </div>
 
-          {/* Painel lateral do dia selecionado */}
-          <div className="bg-[#111726] border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
-                <h3 className="text-sm font-bold text-white">Eventos do Dia</h3>
-                <span className="text-xs font-semibold text-indigo-400 font-mono">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="bg-[#0b132b] text-white px-3 py-2 rounded-lg border border-slate-600 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="Todas as Categorias">Todas as Categorias</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="bg-[#0b132b] text-white px-3 py-2 rounded-lg border border-slate-600 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="Todos os Status">Todos os Status</option>
+            {STATUSES.map(st => (
+              <option key={st} value={st}>{st}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* CORPO PRINCIPAL - CONTEÚDO DINÂMICO */}
+        {viewMode === 'month' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* GRADE DO CALENDÁRIO */}
+            <div className="lg:col-span-2 bg-[#1c2541] p-5 rounded-2xl border border-slate-700/50 shadow-xl">
+              <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-3">
+                <div className="text-red-400">DOM</div>
+                <div>SEG</div>
+                <div>TER</div>
+                <div>QUA</div>
+                <div>QUI</div>
+                <div>SEX</div>
+                <div className="text-red-400">SÁB</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, idx) => {
+                  if (!day) {
+                    return <div key={`empty-${idx}`} className="h-16 rounded-xl bg-[#0b132b]/30"></div>;
+                  }
+
+                  const isSelected = day.dateStr === selectedDateStr;
+                  const dayEvents = filteredEvents.filter(e => e.date === day.dateStr);
+
+                  return (
+                    <button
+                      key={day.dateStr}
+                      onClick={() => setSelectedDateStr(day.dateStr)}
+                      className={`h-16 p-2 rounded-xl border transition-all flex flex-col justify-between items-start text-left relative overflow-hidden ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-600/20 ring-2 ring-blue-500/50'
+                          : 'border-slate-700/60 bg-[#0b132b]/80 hover:border-slate-500'
+                      }`}
+                    >
+                      <span className={`text-sm font-semibold ${isSelected ? 'text-blue-400' : 'text-slate-200'}`}>
+                        {day.dayNumber}
+                      </span>
+
+                      {dayEvents.length > 0 && (
+                        <div className="w-full space-y-1 mt-1">
+                          {dayEvents.slice(0, 2).map(e => (
+                            <div
+                              key={e.id}
+                              className="text-[10px] truncate px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-200 border border-blue-400/30 font-medium"
+                            >
+                              {e.title}
+                            </div>
+                          ))}
+                          {dayEvents.length > 2 && (
+                            <span className="text-[9px] text-slate-400">+{dayEvents.length - 2} mais</span>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PAINEL LATERAL: EVENTOS DO DIA */}
+            <div className="bg-[#1c2541] p-5 rounded-2xl border border-slate-700/50 shadow-xl flex flex-col h-full">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700">
+                <h3 className="font-bold text-lg text-white">Eventos do Dia</h3>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
                   {selectedDateStr.split('-').reverse().join('/')}
                 </span>
               </div>
 
-              {selectedDayEvents.length === 0 ? (
-                <div className="py-16 text-center text-slate-500 space-y-2">
-                  <CalendarIcon className="w-8 h-8 mx-auto opacity-30" />
-                  <p className="text-xs">Nenhum compromisso para este dia.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {selectedDayEvents.map((ev) => (
-                    <div 
-                      key={ev.id} 
-                      className="p-3.5 rounded-xl bg-[#182032] border border-slate-700/50 flex flex-col space-y-1 relative overflow-hidden"
+              <div className="mt-4 flex-1 space-y-3 overflow-y-auto max-h-[450px]">
+                {selectedDayEvents.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <CalendarIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Nenhum compromisso para este dia.</p>
+                  </div>
+                ) : (
+                  selectedDayEvents.map(event => (
+                    <div
+                      key={event.id}
+                      className="p-3.5 rounded-xl bg-[#0b132b] border border-slate-700/80 hover:border-slate-600 transition-all space-y-2"
                     >
-                      <div 
-                        className="absolute left-0 top-0 bottom-0 w-1" 
-                        style={{ backgroundColor: ev.color || '#eab308' }} 
-                      />
-                      <div className="flex items-center justify-between pl-2">
-                        <h4 className="text-xs font-bold text-white">{ev.title}</h4>
-                        <span className="text-[10px] text-slate-400 font-mono">{ev.time}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          {event.category}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span className="text-xs">{event.time}</span>
+                        </div>
                       </div>
-                      {ev.description && (
-                        <p className="text-[11px] text-slate-400 pl-2 leading-relaxed">{ev.description}</p>
+
+                      <h4 className="font-bold text-white text-base">{event.title}</h4>
+
+                      {event.note && (
+                        <p className="text-xs text-slate-300 bg-[#1c2541] p-2 rounded-lg border border-slate-700/50">
+                          💬 {event.note}
+                        </p>
                       )}
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <span className="text-[11px] text-slate-400">Status: <strong className="text-blue-400">{event.status}</strong></span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditModal(event)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-all"
+                            title="Editar"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-all"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
-            <button 
-              onClick={() => setShowModal(true)}
-              className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all border border-indigo-400/30"
-            >
-              <Plus className="w-4 h-4" /> Adicionar Compromisso
-            </button>
           </div>
+        )}
 
-        </div>
-      </main>
-
-      {/* Modal Criar Compromisso */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#111726] border border-slate-800/80 rounded-2xl shadow-2xl max-w-md w-full p-6 relative text-slate-100">
-            <button 
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-sm font-bold text-white mb-4">Novo Compromisso</h3>
-
-            <form onSubmit={handleSaveEvent} className="space-y-4">
+        {/* MODO: AGENDA CLEAN OU COM ANOTAÇÕES */}
+        {(viewMode === 'clean' || viewMode === 'notes') && (
+          <div className="bg-[#1c2541] p-6 rounded-2xl border border-slate-700/50 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-700">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">Título</label>
-                <input 
-                  type="text" 
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Reunião de alinhamento"
-                  className="w-full bg-[#182032] border border-slate-700/50 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
+                <h2 className="text-xl font-bold text-white">
+                  {viewMode === 'notes' ? 'Todas as Anotações da Agenda' : 'Visão Simplificada da Agenda'}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  {filteredEvents.length} compromisso(s) encontrado(s)
+                </p>
               </div>
+              <button
+                onClick={() => handleOpenCreateModal()}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Compromisso</span>
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Data</label>
-                  <input 
-                    type="text" 
-                    disabled 
-                    value={selectedDateStr.split('-').reverse().join('/')}
-                    className="w-full bg-[#182032]/50 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-500"
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredEvents.length === 0 ? (
+                <div className="col-span-full text-center py-16 text-slate-400">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-base">Nenhum compromisso encontrado com os filtros selecionados.</p>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Hora</label>
-                  <input 
-                    type="time" 
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full bg-[#182032] border border-slate-700/50 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">Anotações / Descrição</label>
-                <textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detalhes adicionais..."
-                  rows={2}
-                  className="w-full bg-[#182032] border border-slate-700/50 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">Cor</label>
-                <input 
-                  type="color" 
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="w-10 h-10 rounded-xl cursor-pointer bg-[#182032] border border-slate-700/50"
-                />
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-3">
-                <button 
-                  type="button" 
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/30"
-                >
-                  Salvar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notificação */}
-      {showToast && (
-        <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 text-xs font-bold">
-          <CheckCircle className="w-4 h-4" />
-          <span>Compromisso criado com sucesso!</span>
-        </div>
-      )}
-    </div>
-  );
-}
+              ) : (
+                filteredEvents.map(event => (
+                  <div
+                    key={event.id}
+                    className="bg-[#0b132b] p-4 rounded-xl border border-slate-700/80 hover:border-blue-500/50 transition-all space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          📅 {event.date.split('-').reverse().join('/')} às {event.time}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">
+                          {event.category}
+                        </span>
+                      </div>
