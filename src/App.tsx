@@ -7,14 +7,12 @@ import {
   Clock,
   Trash2,
   Edit3,
-  Filter,
   X,
   Save,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 
-// Tipos de dados
 type Category = 'Trabalho' | 'Pessoal' | 'Reunião' | 'Saúde' | 'Estudos' | 'Outro';
 type Status = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Cancelado';
 type ViewMode = 'month' | 'clean' | 'notes';
@@ -22,8 +20,8 @@ type ViewMode = 'month' | 'clean' | 'notes';
 interface EventItem {
   id: string;
   title: string;
-  date: string; // Formato YYYY-MM-DD
-  time: string; // Formato HH:MM
+  date: string;
+  time: string;
   category: Category;
   status: Status;
   note?: string;
@@ -35,7 +33,6 @@ const CATEGORIES: Category[] = ['Trabalho', 'Pessoal', 'Reunião', 'Saúde', 'Es
 const STATUSES: Status[] = ['Pendente', 'Em Andamento', 'Concluído', 'Cancelado'];
 
 export default function App() {
-  // Estado inicial
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 15));
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-16');
   const [viewMode, setViewMode] = useState<ViewMode>('month');
@@ -45,7 +42,6 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
-  // Estados do Formulário
   const [formTitle, setFormTitle] = useState('');
   const [formDate, setFormDate] = useState('2026-08-16');
   const [formTime, setFormTime] = useState('09:00');
@@ -53,7 +49,6 @@ export default function App() {
   const [formStatus, setFormStatus] = useState<Status>('Pendente');
   const [formNote, setFormNote] = useState('');
 
-  // Eventos Cadastrados
   const [events, setEvents] = useState<EventItem[]>([
     { id: '1', title: 'Apresentação do Projeto', date: '2026-08-16', time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides antes de apresentar.' },
     { id: '2', title: 'Alinhamento de Equipe', date: '2026-08-16', time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir prioridades para a próxima semana.' },
@@ -63,7 +58,6 @@ export default function App() {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
 
-  // Navegação de Mês
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
   };
@@ -72,7 +66,6 @@ export default function App() {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
-  // Gerador de Dias do Calendário
   const calendarGrid = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -88,7 +81,6 @@ export default function App() {
     return days;
   }, [currentYear, currentMonth]);
 
-  // Ações do Modal
   const handleOpenAddModal = () => {
     setEditingEvent(null);
     setFormTitle('');
@@ -144,7 +136,6 @@ export default function App() {
     setIsModalOpen(false);
   };
 
-  // Filtros de Eventos
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -253,7 +244,7 @@ export default function App() {
         {/* Grade do Calendário e Lista de Compromissos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Seção do Calendário (Exibido no modo 'month') */}
+          {/* Seção do Calendário */}
           {viewMode === 'month' && (
             <div className="lg:col-span-2 bg-[#1c2541] p-5 rounded-2xl border border-slate-700/60 shadow-xl space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-slate-700/60">
@@ -381,6 +372,7 @@ export default function App() {
               </div>
             )}
           </div>
+
         </div>
 
       </div>
@@ -449,4 +441,8 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-s
+                  <label className="block text-slate-400 font-semibold mb-1">Status</label>
+                  <select
+                    value={formStatus}
+                    onChange={e => setFormStatus(e.target.value as Status)}
+                    className="w-full bg-[#0b132b] text-white px-3 py-2 rounded-
