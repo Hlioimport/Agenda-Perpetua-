@@ -26,7 +26,7 @@ interface EventItem {
 }
 
 export default function App() {
-  const todayStr = '2026-08-15'; // Hoje: 15 de Agosto
+  const todayStr = '2026-08-15'; // Hoje: Sábado, 15 de Agosto
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 15));
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-15');
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -97,6 +97,7 @@ export default function App() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // Offset dos dias da semana (ex: Sábado = 6)
 
   // Filtragem de eventos
   const filteredEvents = events.filter(ev => {
@@ -163,7 +164,7 @@ export default function App() {
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </div>
 
-              {/* Botão Novo Compromisso em Destaque */}
+              {/* Botão Novo Compromisso */}
               <button 
                 onClick={() => setShowModal(true)}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all border border-indigo-400/30"
@@ -178,7 +179,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Barra de Busca e Filtros Secundários */}
+          {/* Barra de Busca e Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-slate-800/60">
             <div className="relative md:col-span-1">
               <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
@@ -225,7 +226,7 @@ export default function App() {
           
           {/* Calendário */}
           <div className="lg:col-span-2 bg-[#111726] border border-slate-800/80 rounded-2xl p-5 shadow-xl">
-            {/* Dias da semana com cor de destaque */}
+            {/* Cabeçalho dos Dias da Semana */}
             <div className="grid grid-cols-7 text-center text-xs font-bold text-rose-500 mb-3 pb-2 border-b border-slate-800/60">
               <div>DOM</div>
               <div className="text-slate-400">SEG</div>
@@ -236,14 +237,20 @@ export default function App() {
               <div>SÁB</div>
             </div>
 
-            {/* Células dos Dias */}
+            {/* Grid dos Dias do Mês */}
             <div className="grid grid-cols-7 gap-1.5">
+              {/* Espaços em branco antes do 1º dia do mês */}
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <div key={`empty-${i}`} className="min-h-[72px] bg-transparent" />
+              ))}
+
+              {/* Dias do mês */}
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const dayNum = i + 1;
                 const thisDate = new Date(year, month, dayNum);
                 const dateKey = formatDateToKey(thisDate);
                 const isSelected = selectedDateStr === dateKey;
-                const isToday = todayStr === dateKey; // Dia atual (15/08)
+                const isToday = todayStr === dateKey; // 15 de Agosto (Sábado)
                 const dayEvents = filteredEvents.filter(ev => ev.date === dateKey);
 
                 return (
@@ -254,7 +261,7 @@ export default function App() {
                       isSelected
                         ? 'bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/50'
                         : isToday
-                        ? 'bg-emerald-950/40 border-emerald-500/80' // Em destaque verde pro dia atual
+                        ? 'bg-emerald-950/40 border-emerald-500/80' // Destaque verde no dia 15
                         : 'bg-[#182032]/50 border-slate-800/60 hover:border-slate-700 hover:bg-[#182032]'
                     }`}
                   >
@@ -436,11 +443,4 @@ export default function App() {
 
       {/* Toast Notificação */}
       {showToast && (
-        <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 text-xs font-bold">
-          <CheckCircle className="w-4 h-4" />
-          <span>Compromisso criado com sucesso!</span>
-        </div>
-      )}
-    </div>
-  );
-}
+        <div cl
