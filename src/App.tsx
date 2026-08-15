@@ -163,7 +163,7 @@ export default function App() {
     <div className="min-h-screen bg-[#0b132b] text-slate-100 font-sans p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Topo / Barra de Ferramentas */}
+        {/* Header */}
         <header className="bg-[#1c2541] p-4 md:p-6 rounded-2xl border border-slate-700/60 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-600/20 rounded-xl border border-blue-500/30">
@@ -207,7 +207,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* Filtros e Busca */}
+        {/* Filtros */}
         <div className="bg-[#1c2541] p-4 rounded-2xl border border-slate-700/60 shadow-lg flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -241,10 +241,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Grade do Calendário e Lista de Compromissos */}
+        {/* Calendário e Painel Lateral */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Seção do Calendário */}
           {viewMode === 'month' && (
             <div className="lg:col-span-2 bg-[#1c2541] p-5 rounded-2xl border border-slate-700/60 shadow-xl space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-slate-700/60">
@@ -262,7 +261,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Dias da Semana */}
               <div className="grid grid-cols-7 gap-1 text-center">
                 {WEEKDAYS.map(day => (
                   <div key={day} className="text-xs font-semibold text-slate-400 py-1">
@@ -271,7 +269,6 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Dias do Mês */}
               <div className="grid grid-cols-7 gap-1.5">
                 {calendarGrid.map((item, idx) => {
                   if (!item) {
@@ -307,7 +304,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Painel de Eventos / Lista */}
           <div className={`${viewMode === 'month' ? 'lg:col-span-1' : 'lg:col-span-3'} bg-[#1c2541] p-5 rounded-2xl border border-slate-700/60 shadow-xl space-y-4`}>
             <div className="flex justify-between items-center pb-2 border-b border-slate-700/60">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -377,7 +373,7 @@ export default function App() {
 
       </div>
 
-      {/* Modal Criar/Editar */}
+      {/* Modal Criar / Editar */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#1c2541] border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative space-y-4">
@@ -445,4 +441,7 @@ export default function App() {
                   <select
                     value={formStatus}
                     onChange={e => setFormStatus(e.target.value as Status)}
-                    className="w-full bg-[#0b132b] text-white px-3 py-2 rounded-
+                    className="w-full bg-[#0b132b] text-white px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-blue-500"
+                  >
+                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
