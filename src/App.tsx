@@ -4,16 +4,12 @@ import {
   Plus,
   Search,
   FileText,
-  CheckCircle2,
   Clock,
   Trash2,
   Edit3,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   X,
   Save,
-  Tag,
   AlertCircle
 } from 'lucide-react';
 
@@ -163,17 +159,11 @@ export default function App() {
   // Eventos Filtrados
   const filteredEvents = useMemo(() => {
     return events.filter(ev => {
-      // Busca texto
       const matchesSearch = ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (ev.note && ev.note.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Filtro de Categoria
       const matchesCategory = selectedCategory === 'Todas as Categorias' || ev.category === selectedCategory;
-
-      // Filtro de Status
       const matchesStatus = selectedStatus === 'Todos os Status' || ev.status === selectedStatus;
-
-      // Se for modo 'notes', só mostra quem tem anotação
       const matchesNotesMode = viewMode === 'notes' ? Boolean(ev.note && ev.note.trim().length > 0) : true;
 
       return matchesSearch && matchesCategory && matchesStatus && matchesNotesMode;
@@ -284,7 +274,6 @@ export default function App() {
 
         {/* BARRA DE PESQUISA E FILTROS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#1c2541] p-3 rounded-xl border border-slate-700/50">
-          
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
             <input
@@ -488,3 +477,8 @@ export default function App() {
                           {event.category}
                         </span>
                       </div>
+
+                      <h3 className="font-bold text-white text-lg leading-snug">{event.title}</h3>
+
+                      {event.note && (
+                        <div className="bg-[#1c2541] p-3 rounded-lg border border-s
