@@ -27,7 +27,7 @@ interface EventItem {
 
 export default function App() {
   const todayStr = '2026-08-15'; // Hoje: Sábado, 15 de Agosto
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 15));
+  const [currentDate] = useState(new Date(2026, 7, 15));
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-15');
   const [events, setEvents] = useState<EventItem[]>([]);
   
@@ -49,10 +49,10 @@ export default function App() {
 
   // Formatar Date para YYYY-MM-DD
   const formatDateToKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   };
 
   // Buscar compromissos no Firestore
@@ -97,7 +97,7 @@ export default function App() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay(); // Offset dos dias da semana (ex: Sábado = 6)
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // Sábado = index 6
 
   // Filtragem de eventos
   const filteredEvents = events.filter(ev => {
@@ -164,7 +164,6 @@ export default function App() {
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </div>
 
-              {/* Botão Novo Compromisso */}
               <button 
                 onClick={() => setShowModal(true)}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all border border-indigo-400/30"
@@ -239,18 +238,18 @@ export default function App() {
 
             {/* Grid dos Dias do Mês */}
             <div className="grid grid-cols-7 gap-1.5">
-              {/* Espaços em branco antes do 1º dia do mês */}
+              {/* Espaços vazios até o primeiro dia do mês */}
               {Array.from({ length: firstDayOfWeek }).map((_, i) => (
                 <div key={`empty-${i}`} className="min-h-[72px] bg-transparent" />
               ))}
 
-              {/* Dias do mês */}
+              {/* Dias do Mês */}
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const dayNum = i + 1;
                 const thisDate = new Date(year, month, dayNum);
                 const dateKey = formatDateToKey(thisDate);
                 const isSelected = selectedDateStr === dateKey;
-                const isToday = todayStr === dateKey; // 15 de Agosto (Sábado)
+                const isToday = todayStr === dateKey;
                 const dayEvents = filteredEvents.filter(ev => ev.date === dateKey);
 
                 return (
@@ -261,7 +260,7 @@ export default function App() {
                       isSelected
                         ? 'bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/50'
                         : isToday
-                        ? 'bg-emerald-950/40 border-emerald-500/80' // Destaque verde no dia 15
+                        ? 'bg-emerald-950/40 border-emerald-500/80'
                         : 'bg-[#182032]/50 border-slate-800/60 hover:border-slate-700 hover:bg-[#182032]'
                     }`}
                   >
@@ -280,7 +279,6 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* Badge de compromissos no card do dia */}
                     <div className="space-y-1 w-full mt-1">
                       {dayEvents.slice(0, 2).map((ev, idx) => (
                         <div 
@@ -303,7 +301,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Painel de Eventos do Dia Selecionado */}
+          {/* Painel do Dia Selecionado */}
           <div className="bg-[#111726] border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
@@ -443,4 +441,6 @@ export default function App() {
 
       {/* Toast Notificação */}
       {showToast && (
-        <div cl
+        <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 text-xs font-bold">
+          <CheckCircle className="w-4 h-4" />
+          <span>Compromisso criado com sucesso!</
