@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBwr0L3IFveoD6MXUZKHC_0sa0XohvL...", // Coloque sua chave real aqui
+  apiKey: "AIzaSyBwr0L3IFveoD6MXUZKHC_0sa0XohvL...", // Sua chave completa
   authDomain: "agenda-perpetua.firebaseapp.com",
   projectId: "agenda-perpetua",
   storageBucket: "agenda-perpetua.firebasestorage.app",
@@ -12,6 +12,5 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Estas duas linhas com 'export' são o que resolvem o seu erro:
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
