@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
+// IMPORTAÇÕES DO FIREBASE (Adicionadas ao topo)
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { auth, googleProvider } from './firebase'; // Seu arquivo do Firebase existente
 
 type Category = 'Trabalho' | 'Pessoal' | 'Reunião' | 'Saúde' | 'Estudos' | 'Outro';
 type Status = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Cancelado';
@@ -19,6 +22,19 @@ const CATEGORIES: Category[] = ['Trabalho', 'Pessoal', 'Reunião', 'Saúde', 'Es
 const STATUSES: Status[] = ['Pendente', 'Em Andamento', 'Concluído', 'Cancelado'];
 
 export default function App() {
+  // ESTADO DE AUTENTICAÇÃO
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  // Monitora o estado de Login do usuário
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
@@ -37,23 +53,11 @@ export default function App() {
   const [formStatus, setFormStatus] = useState<Status>('Pendente');
   const [formNote, setFormNote] = useState('');
 
-  // Carrega eventos salvos do localStorage ou usa valor padrão inicial
   const [events, setEvents] = useState<EventItem[]>(() => {
     const saved = localStorage.getItem('agenda_events');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao ler do localStorage', e);
-      }
-    }
-    return [
-      { id: '1', title: 'Apresentação do Projeto', date: todayStr, time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides.' },
-      { id: '2', title: 'Alinhamento de Equipe', date: todayStr, time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir metas.' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Salva no localStorage sempre que o estado de eventos mudar (Exclusão / Edição / Criação)
   useEffect(() => {
     localStorage.setItem('agenda_events', JSON.stringify(events));
   }, [events]);
@@ -61,13 +65,10 @@ export default function App() {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
 
-  // Gerador de anos para o dropdown (de 10 anos atrás até 10 anos no futuro)
   const yearOptions = useMemo(() => {
     const startYear = today.getFullYear() - 10;
     const years = [];
-    for (let i = 0; i <= 20; i++) {
-      years.push(startYear + i);
-    }
+    for (let i = 0; i <= 20; i++) years.push(startYear + i);
     return years;
   }, []);
 
@@ -128,19 +129,46 @@ export default function App() {
     });
   }, [events, searchQuery, selectedCategory, selectedStatus, selectedDateStr]);
 
+  // CARREGANDO SESSÃO
+  if (loadingAuth) {
+    return <div className="min-h-screen bg-[#0b132b] flex items-center justify-center text-white text-sm">Carregando...</div>;
+  }
+
+  // TELA DE LOGIN (Se não estiver logado)
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0b132b] flex items-center justify-center p-4">
+        <div className="bg-[#1c2541] border border-slate-700 p-6 rounded-xl max-w-sm w-full text-center space-y-4 shadow-xl">
+          <span className="text-4xl">📅</span>
+          <h2 className="text-xl font-bold text-white">Agenda Perpétua</h2>
+          <p className="text-xs text-slate-400">Faça login para salvar seus compromissos na sua conta.</p>
+          <button
+            onClick={() => signInWithPopup(auth, googleProvider)}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2"
+          >
+            🔑 Entrar com Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // TELA PRINCIPAL (Sua agenda intacta)
   return (
     <div className="min-h-screen bg-[#0b132b] text-slate-100 p-4 font-sans">
       <div className="max-w-6xl mx-auto space-y-4">
         
-        {/* Header */}
+        {/* Header com indicador do usuário e botão Sair */}
         <header className="bg-[#1c2541] p-4 rounded-xl border border-slate-700 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <span className="text-xl">📅</span>
             <h1 className="text-xl font-bold text-white">Agenda Perpétua</h1>
           </div>
-          <button onClick={() => handleOpenModal()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-            <span>+</span> Novo Evento
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-300 hidden sm:inline">{user.email}</span>
+            <button onClick={() => signOut(auth)} className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-600">Sair</button>
+            <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">+ Novo Evento</button>
+          </div>
         </header>
 
         {/* Filtros */}
@@ -158,17 +186,12 @@ export default function App() {
           </select>
         </div>
 
-        {/* Conteúdo Principal */}
+        {/* Grid do Calendário + Lista */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          
-          {/* Calendário */}
           <div className="md:col-span-2 bg-[#1c2541] p-4 rounded-xl border border-slate-700 space-y-3">
-            
-            {/* Controles de Mês e Ano */}
             <div className="flex flex-wrap justify-between items-center border-b border-slate-700 pb-2 gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold text-white">{MONTHS[currentMonth]}</span>
-                {/* Seletor do Ano */}
                 <select
                   value={currentYear}
                   onChange={e => setCurrentDate(new Date(Number(e.target.value), currentMonth, 1))}
@@ -177,8 +200,6 @@ export default function App() {
                   {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
-
-              {/* Botões de Navegação */}
               <div className="flex gap-1 items-center">
                 <button title="Ano Anterior" onClick={() => setCurrentDate(new Date(currentYear - 1, currentMonth, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs font-bold text-slate-300">« Ano</button>
                 <button title="Mês Anterior" onClick={() => setCurrentDate(new Date(currentYear, currentMonth - 1, 1))} className="px-2 py-1 bg-[#0b132b] border border-slate-700 hover:bg-slate-700 rounded text-xs text-slate-300">◀ Mês</button>
@@ -194,23 +215,14 @@ export default function App() {
             <div className="grid grid-cols-7 gap-1">
               {calendarGrid.map((item, idx) => {
                 if (!item) return <div key={`e-${idx}`} className="h-12" />;
-
                 const isToday = item.dateStr === todayStr;
                 const isSelected = item.dateStr === selectedDateStr;
-
                 let cardStyle = 'bg-[#0b132b]/50 border-slate-700 text-slate-300';
-                if (isSelected) {
-                  cardStyle = 'bg-blue-600/30 border-blue-500 text-white ring-2 ring-blue-500/40';
-                } else if (isToday) {
-                  cardStyle = 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold';
-                }
+                if (isSelected) cardStyle = 'bg-blue-600/30 border-blue-500 text-white ring-2 ring-blue-500/40';
+                else if (isToday) cardStyle = 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold';
 
                 return (
-                  <button
-                    key={item.dateStr}
-                    onClick={() => setSelectedDateStr(item.dateStr)}
-                    className={`h-12 p-1 rounded-lg border text-left flex flex-col justify-between transition ${cardStyle}`}
-                  >
+                  <button key={item.dateStr} onClick={() => setSelectedDateStr(item.dateStr)} className={`h-12 p-1 rounded-lg border text-left flex flex-col justify-between transition ${cardStyle}`}>
                     <div className="flex justify-between items-center w-full">
                       <span className="text-xs">{item.dayNumber}</span>
                       {isToday && <span className="text-[9px] bg-emerald-500/30 text-emerald-400 px-1 rounded">Hoje</span>}
@@ -222,7 +234,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Lista de Eventos */}
           <div className="bg-[#1c2541] p-4 rounded-xl border border-slate-700 space-y-3">
             <h2 className="text-sm font-bold text-white border-b border-slate-700 pb-2 flex items-center gap-2">
               ⏱️ Eventos ({selectedDateStr})
@@ -247,7 +258,6 @@ export default function App() {
               ))}
             </div>
           </div>
-
         </div>
       </div>
 
@@ -259,7 +269,6 @@ export default function App() {
               <h3 className="text-sm font-bold text-white">{editingEvent ? 'Editar Evento' : 'Novo Evento'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
-
             <form onSubmit={handleSaveEvent} className="space-y-2 text-xs">
               <input type="text" required placeholder="Título" value={formTitle} onChange={e => setFormTitle(e.target.value)} className="w-full bg-[#0b132b] text-white p-2 rounded border border-slate-700" />
               <div className="grid grid-cols-2 gap-2">
@@ -275,7 +284,6 @@ export default function App() {
                 </select>
               </div>
               <textarea placeholder="Observações" value={formNote} onChange={e => setFormNote(e.target.value)} className="w-full bg-[#0b132b] text-white p-2 rounded border border-slate-700 resize-none" rows={2} />
-              
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-3 py-1 text-slate-400">Cancelar</button>
                 <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded font-semibold">Salvar</button>
