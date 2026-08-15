@@ -26,7 +26,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas as Categorias');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<EventItem null |>(null);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
   const [formTitle, setFormTitle] = useState('');
   const [formDate, setFormDate] = useState('2026-08-16');
@@ -127,10 +127,10 @@ export default function App() {
           </select>
         </div>
 
-        {/* Conteudo Principal */}
+        {/* Conteúdo Principal */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
-          {/* Calendario */}
+          {/* Calendário */}
           <div className="md:col-span-2 bg-[#1c2541] p-4 rounded-xl border border-slate-700 space-y-3">
             <div className="flex justify-between items-center border-b border-slate-700 pb-2">
               <h2 className="text-base font-bold text-white">{MONTHS[currentMonth]} {currentYear}</h2>
