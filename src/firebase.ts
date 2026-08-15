@@ -1,17 +1,17 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBwrOl3IFveoD6MXUZKHC_0sa0XohvL_Ds",
+  apiKey: "AIzaSyBwr0L3IFveoD6MXUZKHC_0sa0XohvL...", // Coloque sua chave real aqui
   authDomain: "agenda-perpetua.firebaseapp.com",
   projectId: "agenda-perpetua",
   storageBucket: "agenda-perpetua.firebasestorage.app",
   messagingSenderId: "1062998494461",
-  appId: "1:1062998494461:web:d817cfd39ebbd2b3450294"
+  appId: "1:1062998494461:web:d817cfd39ebbd2b3..."
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Estas duas linhas com 'export' são o que resolvem o seu erro:
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
