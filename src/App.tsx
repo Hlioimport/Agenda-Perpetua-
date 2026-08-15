@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar as CalendarIcon, Plus, Search, FileText, Clock, Trash2, Edit3, X, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, Clock, Trash2, Edit3, X, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type Category = 'Trabalho' | 'Pessoal' | 'Reunião' | 'Saúde' | 'Estudos' | 'Outro';
 type Status = 'Pendente' | 'Em Andamento' | 'Concluído' | 'Cancelado';
@@ -20,8 +20,11 @@ const CATEGORIES: Category[] = ['Trabalho', 'Pessoal', 'Reunião', 'Saúde', 'Es
 const STATUSES: Status[] = ['Pendente', 'Em Andamento', 'Concluído', 'Cancelado'];
 
 export default function App() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 15));
-  const [selectedDateStr, setSelectedDateStr] = useState('2026-08-16');
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas as Categorias');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos os Status');
@@ -29,15 +32,15 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
   const [formTitle, setFormTitle] = useState('');
-  const [formDate, setFormDate] = useState('2026-08-16');
+  const [formDate, setFormDate] = useState(todayStr);
   const [formTime, setFormTime] = useState('09:00');
   const [formCategory, setFormCategory] = useState<Category>('Reunião');
   const [formStatus, setFormStatus] = useState<Status>('Pendente');
   const [formNote, setFormNote] = useState('');
 
   const [events, setEvents] = useState<EventItem[]>([
-    { id: '1', title: 'Apresentação do Projeto', date: '2026-08-16', time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides.' },
-    { id: '2', title: 'Alinhamento de Equipe', date: '2026-08-16', time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir metas.' }
+    { id: '1', title: 'Apresentação do Projeto', date: todayStr, time: '09:00', category: 'Trabalho', status: 'Em Andamento', note: 'Revisar slides.' },
+    { id: '2', title: 'Alinhamento de Equipe', date: todayStr, time: '17:40', category: 'Reunião', status: 'Pendente', note: 'Definir metas.' }
   ]);
 
   const currentYear = currentDate.getFullYear();
@@ -145,16 +148,33 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-7 gap-1">
-              {calendarGrid.map((item, idx) => item ? (
-                <button
-                  key={item.dateStr}
-                  onClick={() => setSelectedDateStr(item.dateStr)}
-                  className={`h-12 p-1 rounded-lg border text-left flex flex-col justify-between ${item.dateStr === selectedDateStr ? 'bg-blue-600/30 border-blue-500 text-white' : 'bg-[#0b132b]/50 border-slate-700 text-slate-300'}`}
-                >
-                  <span className="text-xs font-bold">{item.dayNumber}</span>
-                  {events.some(e => e.date === item.dateStr) && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-                </button>
-              ) : <div key={`e-${idx}`} className="h-12" />)}
+              {calendarGrid.map((item, idx) => {
+                if (!item) return <div key={`e-${idx}`} className="h-12" />;
+
+                const isToday = item.dateStr === todayStr;
+                const isSelected = item.dateStr === selectedDateStr;
+
+                let cardStyle = 'bg-[#0b132b]/50 border-slate-700 text-slate-300';
+                if (isSelected) {
+                  cardStyle = 'bg-blue-600/30 border-blue-500 text-white ring-2 ring-blue-500/40';
+                } else if (isToday) {
+                  cardStyle = 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold';
+                }
+
+                return (
+                  <button
+                    key={item.dateStr}
+                    onClick={() => setSelectedDateStr(item.dateStr)}
+                    className={`h-12 p-1 rounded-lg border text-left flex flex-col justify-between transition ${cardStyle}`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-xs">{item.dayNumber}</span>
+                      {isToday && <span className="text-[9px] bg-emerald-500/30 text-emerald-400 px-1 rounded">Hoje</span>}
+                    </div>
+                    {events.some(e => e.date === item.dateStr) && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
