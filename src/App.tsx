@@ -97,7 +97,7 @@ export default function App() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay(); // Sábado = index 6
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
 
   // Filtragem de eventos
   const filteredEvents = events.filter(ev => {
@@ -443,4 +443,5 @@ export default function App() {
       {showToast && (
         <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 text-xs font-bold">
           <CheckCircle className="w-4 h-4" />
-          <span>Compromisso criado com sucesso!</
+          <span>Compromisso criado com sucesso!</span>
+        </div>
